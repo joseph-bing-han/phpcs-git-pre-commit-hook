@@ -1,0 +1,97 @@
+#!/bin/sh
+#
+# Created by Joseph Han at 10/12/2017
+# git pre-commit hook 
+# useing for check all php file which was changed
+#
+
+
+SHELL_FOLDER=$(dirname $(readlink -f "$0"))
+PHPCS_BIN="$SHELL_FOLDER/cs/phpcs"
+PHPCBF_BIN="$SHELL_FOLDER/cs/phpcbf"
+CODING_STANDARD=PSR2
+PHPCS_IGNORE=
+PROJECT=`php -r "echo dirname(dirname(dirname(realpath('$0'))));"`
+STAGED_FILES_CMD=`git diff --cached --name-only --diff-filter=ACMR HEAD | grep \\\\.php`
+
+# parse config
+CONFIG_FILE=$SHELL_FOLDER/cs/config
+if [ -e $CONFIG_FILE ]; then
+    . $CONFIG_FILE
+fi
+
+# simple check if code sniffer is set up correctly
+if [ ! -x $PHPCS_BIN ]; then
+    echo "PHP CodeSniffer bin not found or executable -> $PHPCS_BIN"
+    exit 1
+fi
+
+# simple check if code sniffer is set up correctly
+if [ ! -x $PHPCBF_BIN ]; then
+    echo "PHP Code Beautifier and Fixer bin not found or executable -> $PHPCBF_BIN"
+    exit 1
+fi
+
+# execute the code sniffer
+if [ "$PHPCS_IGNORE" != "" ]; then
+    IGNORE="--ignore=$PHPCS_IGNORE"
+else
+    IGNORE=""
+fi
+
+if [ "$PHPCS_SNIFFS" != "" ]; then
+    SNIFFS="--sniffs=$PHPCS_SNIFFS"
+else
+    SNIFFS=""
+fi
+
+if [ "$PHPCS_ENCODING" != "" ]; then
+    ENCODING="--encoding=$PHPCS_ENCODING"
+else
+    ENCODING=""
+fi
+
+if [ "$PHPCS_IGNORE_WARNINGS" == "1" ]; then
+    IGNORE_WARNINGS="-n"
+else
+    IGNORE_WARNINGS=""
+fi
+
+# Determine if a file list is passed
+if [ "$#" -eq 1 ]
+then
+    oIFS=$IFS
+    IFS='
+    '
+    SFILES="$1"
+    IFS=$oIFS
+fi
+SFILES=${SFILES:-$STAGED_FILES_CMD}
+
+echo "Checking PHP Lint..."
+for FILE in $SFILES
+do
+    php -l -d display_errors=0 $PROJECT/$FILE
+    if [ $? != 0 ]
+    then
+        echo "Fix the error before commit."
+        exit 1
+    fi
+    FILES="$FILES $PROJECT/$FILE"
+done
+
+if [ "$FILES" != "" ]
+then
+    echo -e "\r\nRunning Code Sniffer. Code standard $CODING_STANDARD."
+    $PHPCS_BIN $IGNORE_WARNINGS --standard=$CODING_STANDARD $ENCODING $IGNORE $SNIFFS $FILES
+    if [ $? != 0 ]
+    then
+        echo "Fix the error before commit!"
+        echo "Run"
+        echo "  $PHPCBF_BIN --standard=$CODING_STANDARD $FILES"
+        echo "for automatic fix or fix it manually."
+        exit 1
+    fi
+fi
+
+exit $?
