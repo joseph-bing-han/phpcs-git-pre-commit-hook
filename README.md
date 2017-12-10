@@ -1,0 +1,1 @@
+# phpcs-git-pre-commit-hook
