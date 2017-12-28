@@ -68,20 +68,23 @@ then
 fi
 SFILES=${SFILES:-$STAGED_FILES_CMD}
 
+RESULT=0
 echo "Checking PHP Lint..."
 for FILE in $SFILES
 do
-    php -l -d display_errors=0 $PROJECT/$FILE
-    if [ $? != 0 ]
-    then
-        echo "Fix the error before commit."
-        exit 1
-    fi
+    php -l -d display_errors=0 $PROJECT/$FILE || RESULT=1
     FILES="$FILES $PROJECT/$FILE"
 done
 
+if [ $RESULT != 0 ]
+then
+    echo "Fix the error before commit."
+    exit 1
+fi
+
 if [ "$FILES" != "" ]
 then
+    $PHPCS_BIN --config-set colors 1
     echo -e "\r\nRunning Code Sniffer. Code standard $CODING_STANDARD."
     $PHPCS_BIN $IGNORE_WARNINGS --standard=$CODING_STANDARD $ENCODING $IGNORE $SNIFFS $FILES
     if [ $? != 0 ]
