@@ -68,6 +68,12 @@ then
 fi
 SFILES=${SFILES:-$STAGED_FILES_CMD}
 
+if [ -f "../dev.patch" ]
+then
+    echo "Revert config file..."
+    patch -RE < ../dev.patch
+    git checkout -f routes/api_dingo.php
+fi
 RESULT=0
 echo "Checking PHP Lint..."
 for FILE in $SFILES
