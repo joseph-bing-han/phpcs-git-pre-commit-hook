@@ -1,12 +1,15 @@
-#!/bin/sh
+#!/usr/bin/env bash
 #
 # Created by Joseph Han at 10/12/2017
 # git pre-commit hook 
 # useing for check all php file which was changed
 #
+if [ "$(uname)" == "Darwin" ]; then
+    SHELL_FOLDER=$(dirname $(realpath "$0"))
+elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then   
+    SHELL_FOLDER=$(dirname $(readlink -f "$0"))
+fi
 
-
-SHELL_FOLDER=$(dirname $(readlink -f "$0"))
 PHPCS_BIN="$SHELL_FOLDER/cs/phpcs"
 PHPCBF_BIN="$SHELL_FOLDER/cs/phpcbf"
 CODING_STANDARD=PSR2
@@ -71,9 +74,11 @@ SFILES=${SFILES:-$STAGED_FILES_CMD}
 if [ -f "../dev.patch" ]
 then
     echo "Revert config file..."
-    patch -RE < ../dev.patch
-    git checkout -f routes/api_dingo.php
+    patch -REf < ../dev.patch
+    rm -f .env.example.orig
+    rm -f .env.example.rej
 fi
+
 RESULT=0
 echo "Checking PHP Lint..."
 for FILE in $SFILES
